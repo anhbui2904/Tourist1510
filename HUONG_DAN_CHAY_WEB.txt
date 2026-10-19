@@ -1,0 +1,19 @@
+HƯỚNG DẪN CHẠY HÀ NỘI ECHOES TRÊN WINDOWS
+
+1. Giải nén ZIP, mở thư mục hanoi-echoes-code (có file package.json).
+2. Đảm bảo đã cài Node.js phiên bản LTS phù hợp; mở PowerShell trong thư mục này.
+3. Kiểm tra: node -v và npm -v
+4. Chạy lần lượt:
+   npm install
+   npm run dev
+5. Khi chương trình báo đã chạy, mở http://localhost:3000
+
+LƯU Ý:
+- Đừng mở trực tiếp index.html bằng cách nháy đúp.
+- Đừng chạy lệnh bên trong thư mục public/files hoặc src.
+- Nếu npm install báo lỗi, gửi nguyên văn lỗi (hoặc ảnh chụp) để chẩn đoán.
+- Nếu lệnh npm không nhận, cài Node.js và mở lại cửa sổ lệnh.
+- Nếu cổng 3000 bận, đọc địa chỉ thực tế in ra trên màn hình.
+- Không dùng Live Server để chạy mã nguồn React/TypeScript trực tiếp.
+- Thư mục node_modules đã được loại khỏi bản chia sẻ nhằm tránh xung đột giữa các máy; npm install sẽ tạo lại.
+- Không cần tự tạo .env nếu chưa dùng tính năng gọi dịch vụ cần khóa riêng.

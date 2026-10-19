@@ -1,0 +1,6 @@
+{
+  "name": "Hà Nội Echoes - Tour Du Lịch Hà Nội Tinh Hoa",
+  "description": "Trải nghiệm khám phá Hà Nội theo thời lượng linh hoạt: Tour buổi tối, 2-3 giờ, nửa ngày, trọn ngày và tour cuối tuần với thiết kế đậm chất văn hóa thủ đô.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
