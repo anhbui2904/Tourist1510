@@ -181,8 +181,7 @@ async function readRecord(blobs, key) {
     return await blobs.getWithMetadata(key, { type: 'json', consistency: 'strong' });
   } catch (error) {
     if (error?.name !== 'BlobsConsistencyError') throw error;
-    const data = await blobs.get(key, { type: 'json' });
-    return data ? { data, etag: undefined, metadata: {} } : null;
+    return blobs.getWithMetadata(key, { type: 'json' });
   }
 }
 
