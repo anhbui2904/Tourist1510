@@ -99,7 +99,7 @@ export const Hero: React.FC<HeroProps> = ({ currentLang, search, onChange, onSea
         </div>
 
         <form
-          className="relative z-10 mt-8 lg:-mt-2 bg-white rounded-[28px] shadow-[0_18px_50px_rgba(70,30,40,0.12)] border border-white p-2 lg:p-2.5 flex flex-col lg:flex-row lg:items-stretch gap-1"
+          className="relative z-10 mt-8 lg:-mt-2 w-full max-w-full bg-white rounded-[28px] shadow-[0_18px_50px_rgba(70,30,40,0.12)] border border-white p-2 lg:p-2.5 flex flex-col lg:flex-row lg:items-stretch gap-1 min-w-0"
           onSubmit={(e) => {
             e.preventDefault();
             onSearch();

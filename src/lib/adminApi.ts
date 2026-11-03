@@ -9,6 +9,7 @@ export interface StoredBooking {
   children: number;
   pickup: 'hotel' | 'meeting';
   photo: boolean;
+  voucher?: string;
   fullName: string;
   phone: string;
   email: string;
@@ -67,6 +68,7 @@ export async function syncSavedBookings(tourNameById: Record<string, string>) {
           children: Number(item.children) || 0,
           pickup: item.pickup === 'hotel' ? 'hotel' : 'meeting',
           photo: Boolean(item.photo),
+          voucher: String(item.voucher || ''),
           fullName: String(item.fullName || ''),
           phone: String(item.phone || ''),
           email: String(item.email || ''),

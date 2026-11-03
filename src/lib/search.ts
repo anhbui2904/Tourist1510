@@ -1,4 +1,5 @@
 import { Tour, TourCategory } from '../data/toursData';
+import { isWeekendDate } from './booking';
 
 export type DestinationId = 'all' | 'old-quarter' | 'long-bien' | 'citadel' | 'west-lake' | 'countryside';
 export type StyleId = 'all' | 'food' | 'heritage' | 'night' | 'nature' | 'coffee';
@@ -65,6 +66,7 @@ export function tourMatchesSearch(tour: Tour, search: TripSearch, query: string)
   if (search.price === 'under500' && tour.priceVnd >= 500000) return false;
   if (search.price === 'mid' && (tour.priceVnd < 500000 || tour.priceVnd > 1000000)) return false;
   if (search.price === 'over1m' && tour.priceVnd <= 1000000) return false;
+  if (search.date && tour.category === 'weekend' && !isWeekendDate(search.date)) return false;
 
   const q = query.trim().toLowerCase();
   if (!q) return true;

@@ -90,38 +90,48 @@ function quoteTour(tour, adults, children, pickup, photo, percent) {
   return { total, deposit, balance: total - deposit };
 }
 
+function voucherPercent(code) {
+  const normalized = clip(code, 40).toUpperCase();
+  if (!normalized) return 0;
+  if (normalized === 'HANOI2026') return 10;
+  if (normalized === 'WELCOME') return 5;
+  return null;
+}
+
 export function assessBooking(input, now = new Date()) {
   if (!input || typeof input !== 'object') return null;
   const bookingCode = clip(input.bookingCode, 16).toUpperCase();
   const phoneDigits = String(input.phone ?? '').replace(/\D/g, '');
   const email = clip(input.email, 120);
-  const date = clip(input.date, 10);
+  const rawDate = String(input.date ?? '').trim();
   const adults = wholeNumber(input.adults, 1, 30);
   const children = wholeNumber(input.children, 0, 30);
   const tour = TOURS[clip(input.tourId, 80)];
   const pickup = input.pickup === 'hotel' ? 'hotel' : input.pickup === 'meeting' ? 'meeting' : '';
   const hotel = clip(input.hotel, 120);
+  const voucher = clip(input.voucher, 40).toUpperCase();
+  const percent = voucherPercent(voucher);
   if (!/^HE-\d{6}$/.test(bookingCode)) return null;
   if (clip(input.fullName, 80).length < 2) return null;
-  if (phoneDigits.length < 8 || phoneDigits.length > 15) return null;
+  if (phoneDigits.length < 9 || phoneDigits.length > 15) return null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-  if (!realDate(date) || date < dayAfter(hanoiToday(now))) return null;
-  if (!tour || adults === null || children === null || !pickup) return null;
-  if (tour.weekend && ![0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay())) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate) || !realDate(rawDate) || rawDate < dayAfter(hanoiToday(now))) return null;
+  if (!tour || adults === null || children === null || !pickup || percent === null) return null;
+  if (tour.weekend && ![0, 6].includes(new Date(`${rawDate}T00:00:00Z`).getUTCDay())) return null;
   if (pickup === 'hotel' && hotel.length < 2) return null;
   const photo = input.photo === true;
-  const quotes = [0, 5, 10].map((percent) => quoteTour(tour, adults, children, pickup, photo, percent));
-  const matched = quotes.find((item) => item.total === Number(input.total) && item.deposit === Number(input.deposit) && item.balance === Number(input.balance));
-  if (!matched) return null;
+  const matched = quoteTour(tour, adults, children, pickup, photo, percent);
+  if (matched.total !== Number(input.total) || matched.deposit !== Number(input.deposit) || matched.balance !== Number(input.balance)) return null;
   return {
     bookingCode,
     tourId: clip(input.tourId, 80),
     tourName: tour.name,
-    date,
+    date: rawDate,
     adults,
     children,
     pickup,
     photo,
+    voucher,
     fullName: clip(input.fullName, 80),
     phone: clip(phoneDigits, 20),
     email,
@@ -136,8 +146,8 @@ export function assessBooking(input, now = new Date()) {
 }
 
 function sameBooking(existing, record) {
-  const fields = ['tourId', 'tourName', 'date', 'adults', 'children', 'pickup', 'photo', 'fullName', 'phone', 'email', 'hotel', 'notes', 'total', 'deposit', 'balance'];
-  return fields.every((field) => existing[field] === record[field]);
+  const fields = ['tourId', 'tourName', 'date', 'adults', 'children', 'pickup', 'photo', 'voucher', 'fullName', 'phone', 'email', 'hotel', 'notes', 'total', 'deposit', 'balance'];
+  return fields.every((field) => (existing[field] ?? '') === (record[field] ?? ''));
 }
 
 async function migrateLegacy(blobs) {

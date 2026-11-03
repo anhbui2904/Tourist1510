@@ -82,6 +82,8 @@ export function makeBookingCode() {
   return `HE-${Math.floor(100000 + Math.random() * 900000)}`;
 }
 
+export const OTP_TTL_MS = 60_000;
+
 export function makeOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }

@@ -89,7 +89,7 @@ export const ExperiencesSection: React.FC<ExperiencesSectionProps> = ({ currentL
           </button>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 lg:grid lg:grid-cols-5 lg:overflow-visible">
+        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 max-w-full min-w-0 lg:grid lg:grid-cols-5 lg:overflow-visible">
           {ITEMS.map((item) => {
             const Icon = item.icon;
             return (

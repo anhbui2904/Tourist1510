@@ -17,12 +17,20 @@
     font-family: var(--font-sans);
     color: var(--color-ink);
     background-color: var(--color-canvas);
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   body {
     overflow-x: hidden;
+    max-width: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   h1, h2, h3, .font-serif {

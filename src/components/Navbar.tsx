@@ -60,12 +60,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[78px] gap-4">
-          <a href="#home" className="flex items-center gap-2.5 shrink-0 min-w-0">
+        <div className="flex items-center justify-between h-[78px] gap-2 sm:gap-4 min-w-0">
+          <a href="#home" className="flex items-center gap-2 sm:gap-2.5 shrink min-w-0 max-w-[58%]">
             <FlowerMark />
-            <span className="leading-tight">
-              <span className="block font-serif text-[22px] font-semibold text-stone-900 tracking-tight">Hana Echoes</span>
-              <span className="block text-[9px] tracking-[0.16em] uppercase text-stone-400 font-semibold">
+            <span className="leading-tight min-w-0">
+              <span className="block font-serif text-[18px] sm:text-[22px] font-semibold text-stone-900 tracking-tight truncate">Hana Echoes</span>
+              <span className="hidden sm:block text-[9px] tracking-[0.16em] uppercase text-stone-400 font-semibold truncate">
                 {currentLang === 'vi' ? 'Người thật. Hà Nội sâu hơn.' : 'Real people. Deeper Hanoi.'}
               </span>
             </span>
@@ -87,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <div className="relative" ref={langRef}>
               <button
                 onClick={() => setLangOpen((v) => !v)}

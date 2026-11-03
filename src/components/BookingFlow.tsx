@@ -6,6 +6,7 @@ import {
   PickupOption,
   VerifyChannel,
   isWeekendDate,
+  OTP_TTL_MS,
   makeBookingCode,
   makeOtp,
   maskEmail,
@@ -67,6 +68,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [otp, setOtp] = useState('');
   const [sentCode, setSentCode] = useState('');
   const [sentTo, setSentTo] = useState('');
+  const [sentAt, setSentAt] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [otpError, setOtpError] = useState('');
   const [attempts, setAttempts] = useState(0);
@@ -100,6 +102,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       setOtp('');
       setSentCode('');
       setSentTo('');
+      setSentAt(0);
       setSeconds(0);
       setOtpError('');
       setAttempts(0);
@@ -134,25 +137,39 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   const weekendIssue = Boolean(tour && tour.category === 'weekend' && date && !isWeekendDate(date));
   const contactKey = `${phone.replace(/\D/g, '')}|${email.trim().toLowerCase()}`;
+  const otpExpired = Boolean(sentCode && sentAt && Date.now() - sentAt > OTP_TTL_MS);
 
   useEffect(() => {
     if (!sentCode || !sentTo || sentTo === contactKey) return;
     setSentCode('');
     setSentTo('');
+    setSentAt(0);
     setOtp('');
     setSeconds(0);
     setAttempts(0);
     setOtpError('');
   }, [contactKey, sentCode, sentTo]);
 
+  useEffect(() => {
+    if (!otpExpired) return;
+    setSentCode('');
+    setSentTo('');
+    setSentAt(0);
+    setOtp('');
+    setSeconds(0);
+    setAttempts(0);
+    setOtpError(vi ? 'Mã đã hết hạn. Hãy gửi mã mới.' : 'That code has expired. Send a new one.');
+  }, [otpExpired, vi]);
+
   const sendCode = () => {
     const next = makeOtp();
     setSentCode(next);
     setSentTo(contactKey);
+    setSentAt(Date.now());
     setOtp('');
     setOtpError('');
     setAttempts(0);
-    setSeconds(60);
+    setSeconds(Math.ceil(OTP_TTL_MS / 1000));
   };
 
   const goNext = async () => {
@@ -205,14 +222,22 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       if (sentTo !== contactKey) {
         setSentCode('');
         setSentTo('');
+        setSentAt(0);
         setOtp('');
         setSeconds(0);
         setFormError(t('Số điện thoại hoặc email đã đổi. Hãy gửi mã mới.', 'The phone number or email changed. Send a new code.'));
         return;
       }
-      if (!sentCode || attempts >= 5) {
+      if (!sentCode || !sentAt || Date.now() - sentAt > OTP_TTL_MS || attempts >= 5) {
+        if (sentCode && sentAt && Date.now() - sentAt > OTP_TTL_MS) {
+          setSentCode('');
+          setSentTo('');
+          setSentAt(0);
+          setOtp('');
+          setSeconds(0);
+        }
         setFormError(
-          attempts >= 5
+          attempts >= 5 || (sentAt && Date.now() - sentAt > OTP_TTL_MS)
             ? t('Mã cũ đã hết hiệu lực. Hãy gửi mã mới.', 'That code has expired. Send a new one.')
             : t('Hãy gửi mã xác thực trước.', 'Send a verification code first.'),
         );
@@ -223,6 +248,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         setAttempts(nextAttempts);
         if (nextAttempts >= 5) {
           setSentCode('');
+          setSentAt(0);
           setOtp('');
           setSeconds(0);
           setOtpError(t('Bạn đã nhập sai 5 lần. Mã cũ không dùng được nữa. Hãy gửi mã mới.', 'Five incorrect tries. The old code no longer works. Send a new one.'));
@@ -234,7 +260,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     }
     if (step === 5) {
       if (!paidAck) {
-        setFormError(t('Xác nhận bạn đã chuyển khoản đặt cọc.', 'Confirm that the deposit has been transferred.'));
+        setFormError(t('Xác nhận bạn đã gửi yêu cầu giữ chỗ theo hướng dẫn mẫu.', 'Confirm that you followed the sample hold instructions.'));
         return;
       }
       if (typedRef.trim().toUpperCase() !== bookingCode) {
@@ -253,6 +279,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         children,
         pickup,
         photo,
+        voucher: discount > 0 ? voucher.trim().toUpperCase() : '',
         fullName: fullName.trim(),
         phone,
         email: email.trim(),
@@ -265,19 +292,19 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         createdAt: new Date().toISOString(),
         status: 'new' as const,
       };
-      try {
-        const previous = JSON.parse(localStorage.getItem('hana-bookings') || '[]');
-        const list = Array.isArray(previous) ? previous : [];
-        const prior = list.find((item) => item && item.bookingCode === record.bookingCode);
-        const saved = prior?.createdAt ? { ...record, createdAt: prior.createdAt } : record;
-        const rest = list.filter((item) => !item || item.bookingCode !== record.bookingCode);
-        localStorage.setItem('hana-bookings', JSON.stringify([saved, ...rest].slice(0, 20)));
-      } catch {
-        /* the server copy is the one the desk uses */
-      }
       setSaving(true);
       try {
         await submitBooking(record);
+        try {
+          const previous = JSON.parse(localStorage.getItem('hana-bookings') || '[]');
+          const list = Array.isArray(previous) ? previous : [];
+          const prior = list.find((item) => item && item.bookingCode === record.bookingCode);
+          const saved = prior?.createdAt ? { ...record, createdAt: prior.createdAt } : record;
+          const rest = list.filter((item) => !item || item.bookingCode !== record.bookingCode);
+          localStorage.setItem('hana-bookings', JSON.stringify([saved, ...rest].slice(0, 20)));
+        } catch {
+          /* the server copy is the one the desk uses */
+        }
       } catch (err) {
         setSaving(false);
         setFormError(err instanceof Error ? err.message : t('Không lưu được đơn. Thử lại.', 'Could not save the booking. Try again.'));
@@ -291,9 +318,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   if (!open) return null;
 
   return (
-    <div ref={panelRef} className="fixed inset-0 z-[60] overflow-y-auto bg-canvas text-ink">
+    <div ref={panelRef} className="fixed inset-0 z-[60] overflow-y-auto overflow-x-hidden bg-canvas text-ink">
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-stone-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between gap-2 sm:gap-4 min-w-0">
           <button onClick={onClose} className="flex items-center gap-2 text-left">
             <span className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-serif">H</span>
             <span className="hidden sm:block">
@@ -319,7 +346,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 lg:py-8 grid lg:grid-cols-12 gap-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 lg:py-8 grid lg:grid-cols-12 gap-8 min-w-0">
         <div className="lg:hidden">
           <ol className="flex items-center gap-1.5">
             {STEPS.map((item, index) => {
@@ -672,14 +699,14 @@ function DateStep(props: {
           <span className="block text-xs text-stone-500">+{formatVnd(350000)} · {vi ? '30 ảnh chỉnh màu' : '30 graded photos'}</span>
         </span>
       </label>
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2 min-w-0">
         <input
           value={props.voucher}
           onChange={(event) => props.onVoucher(event.target.value.toUpperCase())}
           placeholder="HANOI2026"
-          className="flex-1 rounded-full border border-stone-200 px-4 py-2.5 text-sm uppercase outline-none focus:border-brand"
+          className="min-w-0 flex-1 basis-[10rem] rounded-full border border-stone-200 px-4 py-2.5 text-sm uppercase outline-none focus:border-brand"
         />
-        <button type="button" onClick={props.onApply} className="px-4 rounded-full bg-stone-900 text-white text-sm font-semibold">
+        <button type="button" onClick={props.onApply} className="shrink-0 px-4 rounded-full bg-stone-900 text-white text-sm font-semibold">
           {vi ? 'Áp dụng' : 'Apply'}
         </button>
       </div>
@@ -858,11 +885,11 @@ function DepositStep(props: {
   return (
     <div>
       <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-brand">{vi ? 'Bước 5' : 'Step 5'}</p>
-      <h2 className="mt-1 font-serif text-3xl sm:text-4xl text-stone-900">{vi ? 'Đặt cọc giữ chỗ' : 'Pay the deposit'}</h2>
+      <h2 className="mt-1 font-serif text-3xl sm:text-4xl text-stone-900">{vi ? 'Giữ chỗ bằng cọc mẫu' : 'Hold with a sample deposit'}</h2>
       <p className="mt-2 text-sm text-stone-500">
         {vi
-          ? 'Cọc 30% giữ chỗ trong 2 giờ. Phần còn lại trả cho hướng dẫn viên khi gặp mặt.'
-          : 'A 30% deposit holds the seat for 2 hours. The rest is paid to your guide at meeting time.'}
+          ? 'Đây là bước giữ chỗ mẫu. Hệ thống chưa kiểm chứng chuyển khoản. Nhân viên sẽ xác minh tay sau khi nhận yêu cầu.'
+          : 'This is a sample hold step. The system does not verify a bank transfer. Staff will check the request by hand.'}
       </p>
       <div className="mt-6 rounded-[24px] bg-stone-900 text-white p-5">
         <p className="text-xs uppercase tracking-[0.16em] text-rose-200">{vi ? 'Số tiền cọc' : 'Deposit due'}</p>
@@ -887,7 +914,7 @@ function DepositStep(props: {
       </p>
       <label className="mt-4 flex items-start gap-3 text-sm text-stone-700">
         <input type="checkbox" checked={props.paidAck} onChange={(event) => props.onAck(event.target.checked)} className="mt-1" />
-        <span>{vi ? 'Tôi đã chuyển đúng số cọc và ghi mã đặt chỗ trong nội dung.' : 'I transferred the deposit and used the booking code as the note.'}</span>
+        <span>{vi ? 'Tôi hiểu đây là yêu cầu giữ chỗ mẫu và đã ghi đúng mã đặt chỗ.' : 'I understand this is a sample hold request and I used the correct booking code.'}</span>
       </label>
       <label className="block mt-4 text-xs font-semibold uppercase tracking-wide text-stone-500">
         {vi ? 'Nhập lại mã đặt chỗ' : 'Re-enter the booking code'}
@@ -931,11 +958,11 @@ function ConfirmStep(props: {
         <Check className="w-7 h-7" />
       </div>
       <p className="mt-4 text-[11px] font-semibold tracking-[0.16em] uppercase text-brand">{vi ? 'Bước 6' : 'Step 6'}</p>
-      <h2 className="mt-1 font-serif text-3xl sm:text-4xl text-stone-900">{vi ? 'Đặt tour đã được xác nhận' : 'Your booking is confirmed'}</h2>
+      <h2 className="mt-1 font-serif text-3xl sm:text-4xl text-stone-900">{vi ? 'Đã nhận yêu cầu giữ chỗ' : 'Hold request received'}</h2>
       <p className="mt-2 text-sm text-stone-500">
         {vi
-          ? 'Chỗ được giữ sau khi ghi nhận đặt cọc. Hướng dẫn viên sẽ gọi lại trong giờ làm việc.'
-          : 'The seat is held once the deposit is recorded. A guide will call during desk hours.'}
+          ? 'Yêu cầu đã vào danh sách. Cọc chưa được hệ thống xác minh. Nhân viên sẽ gọi lại trong giờ làm việc.'
+          : 'Your request is on the desk list. The deposit is not system-verified. Staff will call back during desk hours.'}
       </p>
       <p className="mt-4 text-sm text-stone-600">
         {vi ? 'Liên hệ người phụ trách: ' : 'Contact the person in charge: '}
@@ -948,7 +975,7 @@ function ConfirmStep(props: {
         <Row label={vi ? 'Khách' : 'Guests'} value={`${props.adults} + ${props.children}`} />
         <Row label={vi ? 'Người đặt' : 'Lead'} value={`${props.fullName} · ${props.phone}`} />
         <Row label="Email" value={props.email} />
-        <Row label={vi ? 'Đã cọc' : 'Deposit'} value={formatVnd(quote.deposit)} />
+        <Row label={vi ? 'Cọc dự kiến' : 'Expected deposit'} value={formatVnd(quote.deposit)} />
         <Row label={vi ? 'Còn lại' : 'Balance'} value={formatVnd(quote.balance)} />
         <Row label={vi ? 'Phụ trách' : 'Contact'} value={SITE_PHONE_DISPLAY} />
       </div>
